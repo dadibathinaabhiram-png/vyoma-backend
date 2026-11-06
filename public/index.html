@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VYOMA | Nature, Space & Life</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #081b23;
+      color: #fff;
+    }
+
+    header {
+      padding: 22px 8%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #102b34;
+    }
+
+    .logo {
+      font-size: 26px;
+      font-weight: bold;
+      color: #a5e6cb;
+    }
+
+    nav {
+      color: #c6d8dc;
+      font-size: 14px;
+    }
+
+    main {
+      max-width: 1000px;
+      margin: auto;
+      padding: 70px 20px;
+    }
+
+    .hero {
+      text-align: center;
+      padding: 35px 0 65px;
+    }
+
+    h1 {
+      font-size: clamp(35px, 7vw, 64px);
+      margin-bottom: 15px;
+    }
+
+    .hero p {
+      color: #c5d8dc;
+      line-height: 1.7;
+    }
+
+    button {
+      background: #a5e6cb;
+      color: #09272b;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      margin: 12px 5px;
+    }
+
+    button:hover { background: #7bcfb0; }
+    button:disabled { opacity: 0.6; cursor: wait; }
+
+    .panel {
+      background: #12303b;
+      border: 1px solid #30505a;
+      border-radius: 18px;
+      padding: 26px;
+      margin: 25px 0;
+    }
+
+    .muted { color: #b9cdd1; }
+
+    .festival {
+      padding: 18px;
+      margin-top: 15px;
+      background: #1b4047;
+      border-radius: 12px;
+    }
+
+    .festival h3 {
+      margin: 0 0 10px;
+      color: #a5e6cb;
+    }
+
+    footer {
+      text-align: center;
+      color: #91adb4;
+      padding: 35px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="logo">VYOMA</div>
+    <nav>Nature · Space · Life</nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1 id="vyomaTagline">Connecting with the Universe</h1>
+
+      <p>
+        Discover the connection between nature,
+        time, traditions and human life.
+      </p>
+
+      <button id="locationBtn">Detect My Location</button>
+    </section>
+
+    <section class="panel">
+      <h2>Your Location</h2>
+      <p id="locationStatus" class="muted">
+        Location permission has not been requested.
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2>Today's Festivals</h2>
+      <p class="muted">
+        Discover festivals and traditions relevant to your region.
+      </p>
+      <div id="festivalList">
+        <p>Enable location to begin.</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Festival Reminders</h2>
+      <p class="muted">
+        Receive notifications about important festivals.
+      </p>
+
+      <button id="notifyBtn" hidden>
+        Activate Notifications
+      </button>
+
+      <p id="notificationStatus" class="muted" role="status">
+        Checking notification settings...
+      </p>
+    </section>
+  </main>
+
+  <footer>VYOMA · Connecting Humanity with Nature</footer>
+
+  <script>
+    // =====================================
+    // AUTOMATIC TAGLINE
+    // =====================================
+
+    const tagline = document.getElementById('vyomaTagline');
+    const firstVisitKey = 'vyoma_first_visit';
+
+    let firstVisit = localStorage.getItem(firstVisitKey);
+
+    if (!firstVisit || isNaN(Date.parse(firstVisit))) {
+      firstVisit = new Date().toISOString();
+      localStorage.setItem(firstVisitKey, firstVisit);
+    }
+
+    const daysSinceFirstVisit = Math.floor(
+      (Date.now() - new Date(firstVisit).getTime()) / 86400000
+    );
+
+    tagline.textContent = daysSinceFirstVisit >= 30
+      ? "Let's Build the Universe Together"
+      : "Connecting with the Universe";
+
+
+    // =====================================
+    // LOCATION DETECTION
+    // =====================================
+
+    const locationBtn = document.getElementById('locationBtn');
+    const locationStatus = document.getElementById('locationStatus');
+    const festivalList = document.getElementById('festivalList');
+
+    locationBtn.addEventListener('click', () => {
+      if (!navigator.geolocation) {
+        locationStatus.textContent =
+          'Your browser does not support location detection.';
+        return;
+      }
+
+      locationStatus.textContent = 'Detecting your location...';
+
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          const { latitude, longitude } = position.coords;
+
+          locationStatus.textContent =
+            'Location detected. Latitude: ' +
+            latitude.toFixed(3) +
+            ', Longitude: ' +
+            longitude.toFixed(3);
+
+          festivalList.textContent =
+            'Location detected. City identification and ' +
+            'festival API integration are the next step.';
+        },
+
+        error => {
+          locationStatus.textContent =
+            'Unable to detect location: ' + error.message;
+        },
+
+        {
+          enableHighAccuracy: false,
+          timeout: 15000
+        }
+      );
+    });
+
+
+    // =====================================
+    // AUTOMATIC PUSH NOTIFICATIONS
+    // =====================================
+
+    const notifyBtn = document.getElementById('notifyBtn');
+    const notificationStatus =
+      document.getElementById('notificationStatus');
+
+    const notificationPreferenceKey =
+      'vyoma_notifications_enabled';
+
+    function supported() {
+      return (
+        'serviceWorker' in navigator &&
+        'PushManager' in window &&
+        'Notification' in window &&
+        window.isSecureContext
+      );
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+      const padding =
+        '='.repeat((4 - base64String.length % 4) % 4);
+
+      const base64 = (base64String + padding)
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+
+      const rawData = atob(base64);
+
+      return Uint8Array.from(
+        rawData,
+        character => character.charCodeAt(0)
+      );
+    }
+
+    async function subscribeToPush() {
+      const registration =
+        await navigator.serviceWorker.register('/sw.js');
+
+      const keyResponse = await fetch('/api/push/public-key');
+
+      if (!keyResponse.ok) {
+        throw new Error('Unable to retrieve VYOMA public key.');
+      }
+
+      const { publicKey } = await keyResponse.json();
+
+      if (!publicKey) {
+        throw new Error('VYOMA public key is missing.');
+      }
+
+      let subscription =
+        await registration.pushManager.getSubscription();
+
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey)
+        });
+      }
+
+      const response = await fetch('/api/subscriptions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          subscription: subscription.toJSON(),
+          timeZone: Intl.DateTimeFormat()
+            .resolvedOptions().timeZone,
+          region: 'IN-AP',
+          sendHour: 9,
+          consent: true
+        })
+      });
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({}));
+
+        throw new Error(
+          result.error || 'Unable to register notifications.'
+        );
+      }
+
+      notificationStatus.textContent =
+        'VYOMA festival notifications are enabled!';
+
+      notifyBtn.hidden = true;
+    }
+
+    async function setupNotifications(requestPermission = false) {
+      if (!supported()) {
+        notificationStatus.textContent =
+          'Push notifications are unavailable in this browser.';
+        notifyBtn.hidden = true;
+        return;
+      }
+
+      if (
+        localStorage.getItem(notificationPreferenceKey) === 'false'
+      ) {
+        notificationStatus.textContent =
+          'Festival notifications are turned off.';
+        notifyBtn.hidden = true;
+        return;
+      }
+
+      if (Notification.permission === 'denied') {
+        notificationStatus.textContent =
+          'Notifications are blocked. Allow them in browser settings.';
+        notifyBtn.hidden = true;
+        return;
+      }
+
+      if (Notification.permission !== 'granted') {
+        if (!requestPermission) {
+          notificationStatus.textContent =
+            'Activate notifications once to receive automatic reminders.';
+          notifyBtn.hidden = false;
+          return;
+        }
+
+        const permission = await Notification.requestPermission();
+
+        if (permission !== 'granted') {
+          notificationStatus.textContent =
+            'Notification permission: ' + permission;
+          notifyBtn.hidden = permission === 'denied';
+          return;
+        }
+      }
+
+      notifyBtn.hidden = true;
+      notificationStatus.textContent =
+        'Connecting VYOMA notifications...';
+
+      try {
+        await subscribeToPush();
+      } catch (error) {
+        console.error('VYOMA notification setup:', error);
+
+        notificationStatus.textContent =
+          'Notification setup failed: ' + error.message;
+
+        notifyBtn.textContent = 'Retry Notifications';
+        notifyBtn.hidden = false;
+      }
+    }
+
+    notifyBtn.addEventListener('click', async () => {
+      notifyBtn.disabled = true;
+
+      try {
+        await setupNotifications(true);
+      } finally {
+        notifyBtn.disabled = false;
+      }
+    });
+
+    // Automatically reconnect when permission was granted earlier.
+    // Do not silently request permission on first visit.
+    setupNotifications();
+  </script>
+</body>
+</html>
